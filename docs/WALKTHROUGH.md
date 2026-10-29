@@ -14,10 +14,10 @@ If you get stuck, jump to [Troubleshooting](#troubleshooting) at the end.
 2. [What you need](#2-what-you-need)
 3. [Install Node.js on your computer](#3-install-nodejs-on-your-computer)
 4. [Download DScord](#4-download-dscord)
-5. [Create your Discord bot](#5-create-your-discord-bot)
-6. [Set up the relay](#6-set-up-the-relay)
-7. [Start the relay](#7-start-the-relay)
-8. [Find your computer's IP address](#8-find-your-computers-ip-address)
+5. [Run the relay setup](#5-run-the-relay-setup)
+6. [Start the relay](#6-start-the-relay)
+7. [The address, port and PIN for the handheld](#7-the-address-port-and-pin-for-the-handheld)
+8. [Changing settings later](#8-changing-settings-later)
 9. [Get your handheld online](#9-get-your-handheld-online)
 10. [Copy the app to your handheld](#10-copy-the-app-to-your-handheld)
 11. [First launch](#11-first-launch)
@@ -125,166 +125,193 @@ From now on, **"the DScord folder"** means this folder.
 
 ---
 
-## 5. Create your Discord bot
+## 5. Run the relay setup
 
-You'll make a free bot account, give it permission to read messages, and
-invite it to your server. This happens on Discord's website, not in the app.
+The relay has a built-in setup that asks a few questions, checks your answers
+with Discord, and saves them. You only do this once.
 
-### 5a. Create the application
+**Start it:** open the DScord folder and double-click the starter for your
+computer:
+
+| Computer | Double-click | If it doesn't open |
+|---|---|---|
+| Windows | `start-relay.bat` | If Windows shows "Windows protected your PC", click **More info > Run anyway**. |
+| Mac | `start-relay.command` | If macOS says it "cannot be opened", **right-click** it, choose **Open**, then **Open** again. |
+| Linux / Pi | `start-relay.sh` | Run `./start-relay.sh` in a terminal from the DScord folder. |
+
+(Prefer the terminal? `cd` into the DScord folder and run
+`node relay/relay.mjs`. It's the same thing.)
+
+A window opens with **"Welcome to the DScord relay setup"**. The setup has
+four steps. Keep the window and a web browser side by side.
+
+### 5a. Step 1: account type
+
+The setup asks:
+
+```
+  1) Bot account (recommended)
+  2) Your own user account
+```
+
+Type **1** and press Enter. (Option 2 is explained in
+[section 14](#14-optional-log-in-as-yourself-instead-of-a-bot). Read that
+first if you're tempted, because it can get your account banned.)
+
+### 5b. Step 2: create the bot and paste its token
+
+In your browser:
 
 1. Go to the **Discord Developer Portal**:
    <https://discord.com/developers/applications> and log in with your normal
    Discord account.
-2. Click **New Application** (top right).
-3. Give it a name, such as `My DS`. This becomes the bot's name. Tick the box
-   to agree to the terms and click **Create**.
+2. Click **New Application** (top right). Give it a name, such as `My DS`.
+   This becomes the bot's name. Tick the box to agree to the terms and click
+   **Create**.
+3. In the left menu, click **Bot**. Click **Reset Token**, confirm, and enter
+   your 2FA code if asked. Click **Copy**.
 
-### 5b. Get the bot token
-
-1. In the left menu, click **Bot**.
-2. Click **Reset Token**, confirm, and enter your 2FA code if asked.
-3. A long string of letters and numbers appears. This is the **bot token**.
-   Click **Copy** and paste it somewhere safe for a minute (a Notepad / TextEdit
-   window is fine).
+Back in the setup window, **paste** the token (Windows: right-click or
+Ctrl+V; Mac: Cmd+V) and press Enter. It shows as `*****` on purpose. The setup
+checks it with Discord and says **OK: bot "My DS"**.
 
 > ⚠️ **The token is a password.** Anyone with it can control your bot. Never
-> post it in Discord, in screenshots, or on GitHub. If it leaks, come back here
-> and click Reset Token again.
+> post it in Discord, in screenshots, or on GitHub. If it leaks, click Reset
+> Token again and re-run the setup (see [section 8](#8-changing-settings-later)).
 
-### 5c. Turn on Message Content Intent (important!)
+If the setup says the token is invalid, copy it again. Reset Token makes a new
+one each time, so only the newest works.
 
-Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and:
+### 5c. Step 3: let the bot read messages, and invite it
 
-- turn **on** **Message Content Intent**
-- click **Save Changes** at the bottom.
+The setup checks whether the bot is allowed to read message text. If it says
+**Message Content Intent is OFF**:
 
-Without this, the relay can't read message text and stops with the error
-`4014`.
+1. In the Developer Portal, still on the **Bot** page, scroll to
+   **Privileged Gateway Intents**.
+2. Turn on **Message Content Intent** and click **Save Changes**.
+3. Press Enter in the setup window. It checks again.
 
-### 5d. Invite the bot to your server
-
-1. In the left menu, click **OAuth2**. Copy the **Client ID** (a long number).
-2. Paste this link into your browser's address bar, but replace
-   `YOUR_CLIENT_ID` with the number you copied:
-
-   ```
-   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=68608
-   ```
-
-3. Pick your server from the list, click **Continue**, then **Authorize**.
-4. Open Discord. Your bot should now appear in the server's member list (it will
-   look offline until the relay is running).
-
-The `68608` in the link gives the bot permission to **view channels**, **send
-messages** and **read message history**. That's all it needs.
+Next it prints an **invite link** (starting with
+`https://discord.com/oauth2/authorize?...`). Copy it into your browser, pick
+your server, and click **Continue**, then **Authorize**. Press Enter in the
+setup window, and it confirms **The bot is in 1 server: …**. You can invite it
+to more servers now, or later with the same link.
 
 > **Only servers you manage.** To add a bot to a server you need the **Manage
-> Server** permission there. For other servers, ask an admin to open your
-> invite link. The bot only sees channels its roles are allowed to see, the same
-> as a person would.
+> Server** permission there. For other servers, send the invite link to an
+> admin. The bot only sees channels its roles are allowed to see, the same as
+> a person would.
 
----
+### 5d. Step 4: PIN and port
 
-## 6. Set up the relay
+- **PIN:** the setup suggests a random 6-digit PIN. Press Enter to accept it,
+  or type your own (4+ digits). You'll type it on the handheld once. It stops
+  other people on your Wi-Fi from using your relay.
+- **Port:** press Enter to keep `5151`.
+- **Check for updates:** press Enter for yes (see
+  [Updating DScord](#updating-dscord)).
 
-1. Open the DScord folder, then the `relay` folder.
-2. Find the file `config.example.json`. **Make a copy** of it in the same folder
-   and name the copy exactly `config.json`.
-   - **Windows:** copy and paste the file, then rename it. If you can't see
-     `.json` at the end of file names, turn on *View > Show > File name
-     extensions* in File Explorer, otherwise you may end up with
-     `config.json.json`.
-   - **Mac:** select the file, press Cmd+D to duplicate it, then rename it.
-3. Open `config.json` in a plain text editor (Notepad on Windows, TextEdit on Mac
-   using *Format > Make Plain Text*, or any code editor). It looks like this:
+The setup saves everything to `relay/config.json` and shows what to enter on
+the handheld:
 
-   ```json
-   {
-     "token": "YOUR_BOT_TOKEN",
-     "tokenType": "bot",
-     "pin": "1234",
-     "port": 5151,
-     "host": "0.0.0.0"
-   }
-   ```
-
-4. Change two things:
-   - Replace `YOUR_BOT_TOKEN` with your bot token from step 5b. **Keep the quote
-     marks** around it.
-   - Replace `1234` with your **own PIN**: 4 or more digits that only you know,
-     such as `482915`. You'll type this on the DS once. It stops other people on
-     your Wi-Fi from using your relay.
-5. Leave the other lines as they are. Save the file.
-
-When you're done it should look something like this (with your own token):
-
-```json
-{
-  "token": "EXAMPLE.not-a-real-token.paste-yours-here",
-  "tokenType": "bot",
-  "pin": "482915",
-  "port": 5151,
-  "host": "0.0.0.0"
-}
+```
+  On the DS / DSi / 3DS, enter:
+    Relay address: 192.168.1.23
+    Relay port:    5151
+    Relay PIN:     482915
 ```
 
-**Common mistakes:** a missing quote mark or comma, curly "smart quotes"
-(TextEdit can add these, so use Plain Text mode), or spaces inside the token.
+**Write these three down.** (You can show them again any time, see
+[section 7](#7-the-address-port-and-pin-for-the-handheld).)
 
 ---
 
-## 7. Start the relay
+## 6. Start the relay
 
-1. Open a terminal (see [section 3](#3-install-nodejs-on-your-computer)).
-2. Move into the DScord folder. Type `cd ` (with a space after it), then
-   **drag the DScord folder from your file manager into the terminal
-   window**. That pastes its location. Press Enter.
-3. Start the relay:
+At the end of the setup it asks **Start the relay now?** Press Enter. After a
+few seconds you should see:
 
-   ```bash
-   node relay/relay.mjs
-   ```
+```
+12:00:01 DScord relay v1.2.0 listening on 0.0.0.0:5151
 
-4. After a few seconds you should see:
+  On the DS / DSi / 3DS, enter:
+    Relay address: 192.168.1.23
+    Relay port:    5151
 
-   ```
-   12:00:01 DScord relay v1.2.0 listening on 0.0.0.0:5151
-   12:00:01 Gateway: connecting
-   12:00:02 Logged in as bot My DS; 1 servers
-   ```
+12:00:01 Gateway: connecting
+12:00:02 Logged in as bot My DS; 1 servers
+```
 
-   In Discord, your bot now shows as online. 🎉
+In Discord, your bot now shows as online. 🎉
 
-5. **Leave this window open.** Closing it, or letting the computer sleep, stops
-   the relay. To stop it on purpose, click the window and press **Ctrl+C**.
+**Leave this window open.** Closing it, or letting the computer sleep, stops
+the relay. To stop it on purpose, click the window and press **Ctrl+C**.
+
+**Next time**, just double-click the same starter (`start-relay.bat` /
+`.command` / `.sh`). The setup only runs when there are no settings yet.
 
 **If your computer asks "Allow incoming connections?"** (Windows Firewall or
 the macOS firewall), click **Allow**. On Windows, tick **Private networks**.
 Without this, the handheld can't reach the relay.
 
 **If you see an error instead**, check [Troubleshooting](#troubleshooting). The
-relay tells you what's wrong, for example a missing token or wrong PIN format.
+relay tells you what's wrong.
 
 ---
 
-## 8. Find your computer's IP address
+## 7. The address, port and PIN for the handheld
 
-The handheld needs your computer's **local IP address**: its address on your
-home network, usually something like `192.168.1.23` or `10.0.0.5`.
+The relay prints the **address** every time it starts. That's your computer's
+local IP address, something like `192.168.1.23` or `10.0.0.5`. The setup
+showed the PIN. To see all three again, run this in the DScord folder:
+
+```bash
+node relay/relay.mjs --info
+```
+
+If it lists more than one address, use the one on the same Wi-Fi as the
+handheld (usually the one starting with `192.168.`).
+
+Finding it by hand instead:
 
 - **Windows:** in PowerShell, run `ipconfig`. Look for **IPv4 Address** under
   your Wi-Fi or Ethernet adapter.
 - **Mac:** System Settings > Wi-Fi > click **Details…** next to your network.
-  The **IP address** is listed there. (Or run `ipconfig getifaddr en0` in
-  Terminal.)
 - **Linux / Pi:** run `hostname -I`. The first address is usually the one.
-
-Write it down. Ignore addresses starting with `127.` (those only point to the
-computer itself).
 
 > **Tip:** this address can change after a router restart. If the app suddenly
 > can't connect one day, check it again. You can usually make it permanent with
 > a "DHCP reservation" in your router's settings.
+
+---
+
+## 8. Changing settings later
+
+- **Run the setup again:** in the DScord folder run
+  `node relay/relay.mjs --setup` (or `start-relay.bat --setup` /
+  `./start-relay.command --setup`). It shows your current answers as defaults,
+  so you can press Enter to keep them. Use this to switch between bot and user
+  accounts, change the token or PIN, or invite the bot to more servers.
+- **Edit the file by hand:** the settings live in `relay/config.json`, a plain
+  text file:
+
+  ```json
+  {
+    "token": "EXAMPLE.not-a-real-token.paste-yours-here",
+    "tokenType": "bot",
+    "pin": "482915",
+    "port": 5151,
+    "host": "0.0.0.0",
+    "updateCheck": true
+  }
+  ```
+
+  Use a plain text editor (Notepad, or TextEdit in *Format > Make Plain Text*
+  mode). Keep the quote marks and commas exactly as shown. Restart the relay
+  after editing.
+
+- **More commands:** `node relay/relay.mjs --help`.
 
 ---
 
@@ -363,15 +390,15 @@ Put the handheld's SD card (or the flashcart's microSD) into your computer.
 
 ## 11. First launch
 
-1. **Make sure the relay is running** on your computer (section 7).
+1. **Make sure the relay is running** on your computer ([section 6](#6-start-the-relay)).
 2. Start DScord. The first time, it asks three questions using the
    on-screen keyboard:
 
    | Question | What to enter |
    |---|---|
-   | **Relay address** | Your computer's IP from section 8, e.g. `192.168.1.23` |
+   | **Relay address** | The address the relay shows ([section 7](#7-the-address-port-and-pin-for-the-handheld)), e.g. `192.168.1.23` |
    | **Relay port** | `5151` (already filled in; just confirm) |
-   | **Relay PIN** | The PIN you put in `config.json` |
+   | **Relay PIN** | The PIN from the setup (`node relay/relay.mjs --info` shows it) |
 
    - **DS / DSi:** tap the keys on the touch screen with the stylus. Press
      **START** (or the keyboard's Enter key) when done. **B** cancels.
@@ -555,14 +582,25 @@ Also:
   PIN can read your DMs and post as you. If friends want to use DScord,
   each person runs their own relay with their own account.
 - Your user token is the master key to your account, much more powerful than
-  your password: it skips 2FA. Never paste it anywhere except your own
-  `config.json`. Logging out of Discord everywhere (*User Settings > Devices >
+  your password: it skips 2FA. Never paste it anywhere except the DScord
+  setup. Logging out of Discord everywhere (*User Settings > Devices >
   Log out of all known devices*) or changing your password makes the old token
   stop working.
 
-If you accept the risk, set `"tokenType": "user"` in `config.json`, put your
-own token in `"token"`, and restart the relay. It prints a warning when it
-starts in this mode.
+If you accept the risk, run the setup (`node relay/relay.mjs --setup`, or the
+first time you start the relay) and choose **2) Your own user account**:
+
+1. The setup repeats the risks and asks you to type `I understand`.
+   Anything else switches back to a bot.
+2. It asks for your account's token. That's the long code the Discord website
+   sends as the `Authorization` header with each request. Paste it (it shows
+   as stars). The setup checks it and says **OK: user "yourname"**. If you
+   paste a bot token by mistake, it tells you.
+3. There's nothing to invite: all your servers and DMs appear on the handheld.
+4. Choose a PIN and port as in [section 5d](#5d-step-4-pin-and-port).
+
+The relay prints a warning each time it starts in this mode. To go back to a
+bot, run `--setup` again and choose 1.
 
 ---
 
@@ -573,13 +611,17 @@ starts in this mode.
 | Message | What it means / what to do |
 |---|---|
 | `node: command not found` / `'node' is not recognized` | Node.js isn't installed or the terminal was open during install. Install it (section 3) and open a new terminal. |
-| `No token. Copy relay/config.example.json to …` | `config.json` is missing or still has `YOUR_BOT_TOKEN`. Redo section 6. Check the name isn't `config.json.json` or `config.json.txt`. |
+| `The DScord relay needs Node.js 22 or newer` | Install the current LTS from <https://nodejs.org> (section 3). |
+| `No usable config … Run the setup in a terminal` | The relay was started without a window it can ask questions in. Double-click the starter, or run `node relay/relay.mjs --setup` in a terminal. |
+| `No token in …config.json` | Run the setup: `node relay/relay.mjs --setup`. |
 | `Set a numeric PIN (4+ digits)` | The PIN in `config.json` must be digits only, at least 4 of them, inside quotes. |
-| `SyntaxError: … JSON` | `config.json` has a typo: a missing comma or quote, or curly quotes. Compare it with the example in section 6. |
-| `Discord rejected the bot token (4004)` | The token is wrong or was reset. Copy it again (section 5b). If you're using a user token, set `"tokenType": "user"`. |
-| `Message Content intent not enabled (4014)` | Turn on Message Content Intent (section 5c) and click Save. |
-| `EADDRINUSE` | The relay is already running in another window, or something else uses port 5151. Close the other one, or change `port` in `config.json` (and on the DS). |
-| `Logged in as bot …; 0 servers` | The bot hasn't been invited anywhere yet. Do section 5d. |
+| `config.json isn't valid JSON` | A hand edit broke the file (missing comma or quote, curly quotes). Fix it using the example in [section 8](#8-changing-settings-later), or run `--setup` again. |
+| `Discord rejected the bot token (4004)` | The token is wrong or was reset. Run `--setup` and paste a fresh one (section 5b). |
+| `Message Content intent not enabled (4014)` | Turn on Message Content Intent (section 5c) and click Save. The setup checks this too. |
+| `Port 5151 is already in use` | The relay is already running in another window, or another program uses the port. Close the other one, or pick another port with `--setup` (and enter it on the handheld). |
+| `Logged in as bot …; 0 servers` | The bot hasn't been invited anywhere yet. Run `--setup` again: it prints the invite link (section 5c). |
+| Setup: "that looks like a user token" / "looks like a bot token" | You pasted the other kind of token. For a bot, copy it from the Developer Portal's **Bot** page. |
+| Double-clicking the starter does nothing / closes at once | Run it from a terminal instead (`node relay/relay.mjs`) to see the message. On Mac, right-click > Open the first time. |
 
 ### On the handheld
 
@@ -587,7 +629,7 @@ starts in this mode.
 |---|---|
 | **No Wi-Fi. Set up a connection in a DS game's WFC settings…** | The DS has no working saved connection, or the network uses WPA/WPA2. See section 9. |
 | **Wi-Fi isn't connected…** (3DS) | Turn Wi-Fi on (the slider or switch on the side) and check System Settings > Internet Settings. |
-| **Can't reach 192.168.x.x:5151** | The relay isn't running, the IP is wrong (check section 8 again), the DS and computer are on different networks, or the firewall is blocking it (allow Node.js on *Private networks*). On a guest network, turn off client/AP isolation. |
+| **Can't reach 192.168.x.x:5151** | The relay isn't running, the IP is wrong (check [section 7](#7-the-address-port-and-pin-for-the-handheld) again), the DS and computer are on different networks, or the firewall is blocking it (allow Node.js on *Private networks*). On a guest network, turn off client/AP isolation. |
 | **Can't resolve …** | You typed a name instead of an IP, or there's a typo. Use the numeric IP. |
 | **Wrong PIN** | Press X and re-enter the PIN exactly as in `config.json`. |
 | **The relay didn't answer the login** | The relay is running but not logged in to Discord. Look at the relay window for an error. |

@@ -3,8 +3,10 @@
 // speaks the small line protocol in ../PROTOCOL.md to DS / DSi / 3DS clients.
 // No dependencies; needs Node 22+ (global fetch and WebSocket).
 
+import crypto from 'node:crypto';
 import net from 'node:net';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,10 +18,19 @@ const RELEASES_URL = `github.com/${REPO}/releases`;
 
 // ---------------------------------------------------------------- config
 
-function loadConfig() {
-  let file = {};
-  const p = process.env.RELAY_CONFIG || path.join(HERE, 'config.json');
-  if (fs.existsSync(p)) file = JSON.parse(fs.readFileSync(p, 'utf8'));
+const CONFIG_PATH = process.env.RELAY_CONFIG || path.join(HERE, 'config.json');
+const API = 'https://discord.com/api/v10';
+const PERMISSIONS = 68608; // View Channels + Send Messages + Read Message History
+const ARGS = process.argv.slice(2);
+
+function readConfigFile() {
+  if (!fs.existsSync(CONFIG_PATH)) return null;
+  try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); }
+  catch (e) { die(`${CONFIG_PATH} isn't valid JSON (${e.message}).\nFix it, or run the setup again:  node relay/relay.mjs --setup`); }
+}
+
+function loadConfig(file) {
+  file ||= {};
   const cfg = {
     token: process.env.DISCORD_TOKEN || file.token,
     tokenType: String(process.env.DISCORD_TOKEN_TYPE || file.tokenType || 'bot').toLowerCase(),
@@ -28,7 +39,7 @@ function loadConfig() {
     host: process.env.RELAY_HOST || file.host || '0.0.0.0',
     updateCheck: !['0', 'false', 'no'].includes(String(process.env.RELAY_UPDATE_CHECK ?? file.updateCheck ?? true).toLowerCase()),
   };
-  if (!cfg.token || cfg.token === 'YOUR_BOT_TOKEN') die(`No token. Copy relay/config.example.json to ${p} and fill in "token" (or set DISCORD_TOKEN).`);
+  if (!cfg.token || cfg.token === 'YOUR_BOT_TOKEN') die(`No token in ${CONFIG_PATH}. Run the setup:  node relay/relay.mjs --setup\n(or set DISCORD_TOKEN).`);
   if (cfg.tokenType !== 'bot' && cfg.tokenType !== 'user') die('"tokenType" must be "bot" or "user".');
   cfg.token = cfg.token.replace(/^Bot\s+/i, '');
   if (cfg.tokenType === 'user') console.warn('WARNING: user-token mode. Automating a user account is against Discord\'s Terms of Service and can get the account disabled. Use at your own risk.');
@@ -39,7 +50,242 @@ function loadConfig() {
 function die(msg) { console.error(msg); process.exit(1); }
 function log(...a) { console.log(new Date().toISOString().slice(11, 19), ...a); }
 
-const cfg = loadConfig();
+// The computer's addresses on the local network: what the handheld connects to.
+// VPN, virtual-machine and container interfaces are skipped when real ones exist.
+function lanAddresses() {
+  const all = [];
+  for (const [name, addrs] of Object.entries(os.networkInterfaces()))
+    for (const a of addrs || [])
+      if (a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.')) all.push({ name, address: a.address });
+  const virtual = /^(utun|ipsec|tun|tap|ppp|awdl|llw|bridge|vboxnet|vmnet|vEthernet|docker|br-|veth|virbr|tailscale|zt|wg)/i;
+  const real = all.filter(a => !virtual.test(a.name));
+  return real.length ? real : all;
+}
+
+function printConnectInfo(port, pin) {
+  const ips = lanAddresses();
+  console.log('\n  On the DS / DSi / 3DS, enter:');
+  if (!ips.length) console.log('    Relay address: (no network found; is this computer on Wi-Fi?)');
+  else if (ips.length === 1) console.log(`    Relay address: ${ips[0].address}`);
+  else {
+    console.log('    Relay address: one of these (use the one on the same Wi-Fi as the handheld)');
+    for (const ip of ips) console.log(`      ${ip.address.padEnd(16)} (${ip.name})`);
+  }
+  console.log(`    Relay port:    ${port}`);
+  if (pin) console.log(`    Relay PIN:     ${pin}`);
+  console.log('');
+}
+
+function printHelp() {
+  console.log(`DScord relay v${VERSION}
+
+Usage:
+  node relay/relay.mjs           start the relay (runs the setup first if there's no config)
+  node relay/relay.mjs --setup   run the setup again (bot or user token, PIN, port)
+  node relay/relay.mjs --info    show the address, port and PIN to enter on the handheld
+  node relay/relay.mjs --help    this help
+
+Config file: ${CONFIG_PATH}
+Guide: https://github.com/${REPO}/blob/main/docs/WALKTHROUGH.md`);
+}
+
+// ---------------------------------------------------------------- setup wizard
+
+// Interactive first-run setup: picks the account type, checks the token with
+// Discord, walks through the bot's intent and invite, and writes config.json.
+async function runSetup(old, { confirm = false } = {}) {
+  const readline = await import('node:readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+  let hidden = false;
+  const write = rl._writeToOutput.bind(rl);
+  // While a token is typed, echo stars instead of the characters.
+  rl._writeToOutput = s => {
+    const typed = rl.line || '';
+    if (!hidden || !typed || /[\r\n]/.test(s)) return write(s);
+    if (typed.endsWith(s)) return write('*'.repeat(s.length)); // keystrokes / paste
+    write(s.split(typed).join('*'.repeat(typed.length)));     // line redraws
+  };
+  rl.on('SIGINT', () => { console.log('\nSetup cancelled. Nothing was saved.'); process.exit(1); });
+  const ask = (q, { secret = false } = {}) => new Promise(resolve => {
+    rl.question(q, a => { hidden = false; resolve(a.trim()); });
+    hidden = secret; // the prompt itself is written before this flips
+  });
+  const yes = async (q, def = true) => {
+    const a = (await ask(`${q} ${def ? '[Y/n]' : '[y/N]'} `)).toLowerCase();
+    return a ? a.startsWith('y') : def;
+  };
+  const pause = q => ask(`${q} (press Enter) `);
+  const call = async (auth, route) => {
+    const res = await fetch(API + route, { headers: { Authorization: auth, 'User-Agent': `DiscordBot (https://github.com/${REPO}, ${VERSION})` } });
+    return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) };
+  };
+  const line = () => console.log('-'.repeat(64));
+
+  if (confirm && !(await yes(`${CONFIG_PATH} already exists. Change its settings?`, false))) {
+    rl.close();
+    console.log('Nothing changed.');
+    process.exit(0);
+  }
+
+  console.log(`\nWelcome to the DScord relay setup (v${VERSION}).
+
+The relay runs on this computer and logs in to Discord for your DS, DSi or
+3DS. This takes about 5 minutes. Press Ctrl+C at any time to stop.
+Full guide: https://github.com/${REPO}/blob/main/docs/WALKTHROUGH.md
+`);
+  line();
+  console.log(`Step 1 of 4: account type
+
+  1) Bot account (recommended)
+     A free bot you create. Shows the servers you invite it to. Allowed by
+     Discord. Anyone can safely share one relay.
+
+  2) Your own user account
+     Shows all your servers and DMs, but this is against Discord's Terms of
+     Service: Discord can disable accounts that do it. Only for an account
+     you could afford to lose. Never share this relay with other people.
+`);
+  let type = '';
+  while (!type) {
+    const a = await ask(`Choose 1 or 2 [${old?.tokenType === 'user' ? '2' : '1'}]: `) || (old?.tokenType === 'user' ? '2' : '1');
+    if (a === '1' || a.toLowerCase() === 'bot') type = 'bot';
+    else if (a === '2' || a.toLowerCase() === 'user') type = 'user';
+  }
+  if (type === 'user') {
+    console.log(`
+  You chose your own account. To be clear about the risk:
+  - Discord's rules forbid automating user accounts ("self-bots").
+  - Your account may be suspended or banned. DScord takes no responsibility.
+  - Anyone with this relay's address and PIN can read your DMs and post as you.
+`);
+    const ok = (await ask('Type "I understand" to continue, or anything else to use a bot instead: ')).toLowerCase();
+    if (ok !== 'i understand') { type = 'bot'; console.log('OK, setting up a bot account instead.'); }
+  }
+
+  line();
+  let token = '', who = null;
+  if (type === 'bot') {
+    console.log(`Step 2 of 4: create the bot and copy its token
+
+  1. Open https://discord.com/developers/applications and log in.
+  2. Click "New Application", give it a name (this is the bot's name),
+     agree to the terms and click Create.
+  3. In the left menu click "Bot", then "Reset Token", and copy the token.
+     Treat it like a password.
+`);
+  } else {
+    console.log(`Step 2 of 4: your account's token
+
+  Your token is the long code the Discord website sends with every request
+  (the "Authorization" header). It's not your password: it bypasses 2FA, so
+  never paste it anywhere but here. Changing your password or logging out of
+  all devices makes it stop working.
+`);
+  }
+  for (;;) {
+    const keep = old?.token && old.tokenType === type ? ' (Enter keeps the current one)' : '';
+    token = (await ask(`Paste the ${type} token${keep}: `, { secret: true })).replace(/^Bot\s+/i, '').replace(/^"|"$/g, '');
+    if (!token && keep) token = old.token;
+    if (!token) continue;
+    process.stdout.write('Checking with Discord... ');
+    const me = await call(type === 'bot' ? `Bot ${token}` : token, '/users/@me').catch(e => ({ ok: false, status: 0, error: e }));
+    if (me.ok && !!me.data.bot === (type === 'bot')) { who = me.data; console.log(`OK: ${type === 'bot' ? 'bot' : 'user'} "${me.data.username}"`); break; }
+    if (me.status === 0) { console.log(`couldn't reach Discord (${me.error.message}). Check the internet connection.`); continue; }
+    // Maybe the other kind of token was pasted.
+    const other = await call(type === 'bot' ? token : `Bot ${token}`, '/users/@me').catch(() => ({ ok: false }));
+    if (other.ok || (me.ok && !!me.data.bot !== (type === 'bot')))
+      console.log(type === 'bot' ? 'that looks like a user token, not a bot token. Copy the token from the Bot page.' : 'that looks like a bot token. Choose 1 (bot) instead, or paste your user token.');
+    else console.log('Discord says this token is invalid. Copy it again (for a bot: "Reset Token").');
+  }
+
+  if (type === 'bot') {
+    line();
+    console.log('Step 3 of 4: let the bot read messages, and invite it\n');
+    const auth = `Bot ${token}`;
+    for (;;) {
+      const app = await call(auth, '/applications/@me').catch(() => ({ ok: false }));
+      const flags = app.ok ? app.data.flags || 0 : 0;
+      if (!app.ok || flags & ((1 << 18) | (1 << 19))) { console.log('  Message Content Intent: on'); break; }
+      console.log(`  Message Content Intent is OFF, so the bot can't read messages.
+  On the Bot page, under "Privileged Gateway Intents", turn on
+  "Message Content Intent" and click "Save Changes".`);
+      await pause('  Done that?');
+    }
+    const app = await call(auth, '/applications/@me').catch(() => ({ ok: false }));
+    const invite = `https://discord.com/oauth2/authorize?client_id=${app.data?.id || who.id}&scope=bot&permissions=${PERMISSIONS}`;
+    for (;;) {
+      const guilds = await call(auth, '/users/@me/guilds').catch(() => ({ ok: false }));
+      const list = guilds.ok ? guilds.data : [];
+      if (list.length) {
+        console.log(`  The bot is in ${list.length} server${list.length > 1 ? 's' : ''}: ${list.slice(0, 5).map(g => g.name).join(', ')}${list.length > 5 ? ', ...' : ''}`);
+        if (!(await yes('  Invite it to another server first?', false))) break;
+      } else {
+        console.log('  The bot isn\'t in any server yet.');
+      }
+      console.log(`
+  Open this link, pick a server you manage, and click Authorize:
+
+    ${invite}
+
+  (It asks for View Channels, Send Messages and Read Message History.)`);
+      await pause('  Invited it?');
+    }
+  } else {
+    line();
+    console.log('Step 3 of 4: nothing to invite: your own servers and DMs will show up.');
+  }
+
+  line();
+  console.log(`Step 4 of 4: PIN and port
+
+  The handheld sends the PIN once when it connects, so other people on your
+  Wi-Fi can't use the relay. Use 4 or more digits.
+`);
+  const suggested = old?.pin && /^\d{4,}$/.test(String(old.pin)) ? String(old.pin) : String(crypto.randomInt(100000, 1000000));
+  let pin = '';
+  while (!/^\d{4,}$/.test(pin)) {
+    pin = (await ask(`PIN [${suggested}]: `)) || suggested;
+    if (!/^\d{4,}$/.test(pin)) console.log('  Digits only, at least 4.');
+  }
+  let port = 0;
+  while (!(port >= 1024 && port <= 65535)) port = Number((await ask(`Port [${old?.port || 5151}]: `)) || old?.port || 5151);
+  const updateCheck = await yes('Check GitHub for DScord updates (startup and every 6 hours)?', old?.updateCheck ?? true);
+
+  const conf = { token, tokenType: type, pin, port, host: old?.host || '0.0.0.0', updateCheck };
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(conf, null, 2) + '\n', { mode: 0o600 });
+  line();
+  console.log(`Saved ${CONFIG_PATH}
+(It contains your token: keep it private. Run with --setup to change it.)`);
+  printConnectInfo(port, pin);
+  console.log(`  On a DS or DSi, the handheld's Wi-Fi must be open or WEP (see the guide).
+  If your computer asks to allow incoming connections for Node, click Allow.
+`);
+  const start = await yes('Start the relay now?');
+  rl.close();
+  if (!start) { console.log('Start it later with:  node relay/relay.mjs'); process.exit(0); }
+  return conf;
+}
+
+async function prepareConfig() {
+  if (typeof WebSocket === 'undefined' || typeof fetch === 'undefined')
+    die(`The DScord relay needs Node.js 22 or newer (this is ${process.version}). Get it from https://nodejs.org`);
+  if (ARGS.includes('--help') || ARGS.includes('-h')) { printHelp(); process.exit(0); }
+  let file = readConfigFile();
+  if (ARGS.includes('--info')) {
+    if (!file) die('No config yet. Run:  node relay/relay.mjs --setup');
+    printConnectInfo(file.port || 5151, file.pin);
+    process.exit(0);
+  }
+  const envToken = !!process.env.DISCORD_TOKEN;
+  if (ARGS.includes('--setup') || (!envToken && (!file?.token || file.token === 'YOUR_BOT_TOKEN'))) {
+    if (!process.stdin.isTTY) die(`No usable config at ${CONFIG_PATH}.\nRun the setup in a terminal:  node relay/relay.mjs --setup`);
+    const existing = file?.token && file.token !== 'YOUR_BOT_TOKEN';
+    file = await runSetup(existing ? file : null, { confirm: existing });
+  }
+  return loadConfig(file);
+}
+
+const cfg = await prepareConfig();
 
 // ---------------------------------------------------------------- discord identity
 
@@ -50,8 +296,6 @@ const AUTH = USER ? cfg.token : `Bot ${cfg.token}`;
 // GUILDS | GUILD_MESSAGES | DIRECT_MESSAGES | MESSAGE_CONTENT (privileged: enable it
 // under Bot -> Privileged Gateway Intents in the Developer Portal).
 const INTENTS = (1 << 0) | (1 << 9) | (1 << 12) | (1 << 15);
-const API = 'https://discord.com/api/v10';
-
 async function rest(method, route, body) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(API + route, {
@@ -291,8 +535,8 @@ function gatewayConnect() {
   ws.addEventListener('close', ev => {
     clearInterval(hbTimer);
     log(`Gateway closed (${ev.code}) ${ev.reason || ''}`);
-    if (ev.code === 4004) die(`Discord rejected the ${cfg.tokenType} token (4004). Check "token" and "tokenType" in relay/config.json.`);
-    if (ev.code === 4014) die('Message Content intent not enabled (4014). Turn it on in the Developer Portal under Bot.');
+    if (ev.code === 4004) die(`Discord rejected the ${cfg.tokenType} token (4004). Run the setup again to paste a new one:  node relay/relay.mjs --setup`);
+    if (ev.code === 4014) die('Message Content intent not enabled (4014). Turn it on in the Developer Portal under Bot > Privileged Gateway Intents, then start the relay again.');
     if ([4010, 4011, 4012, 4013].includes(ev.code)) die(`Fatal gateway close ${ev.code}`);
     if (ev.code === 4007 || ev.code === 4009) sessionId = null;
     setTimeout(gatewayConnect, 2000 + Math.random() * 3000);
@@ -574,7 +818,12 @@ class Client {
 net.createServer(sock => {
   const c = new Client(sock);
   log(`${c.name} connected`);
-}).listen(cfg.port, cfg.host, () => log(`DScord relay v${VERSION} listening on ${cfg.host}:${cfg.port}`));
+}).listen(cfg.port, cfg.host, () => {
+  log(`DScord relay v${VERSION} listening on ${cfg.host}:${cfg.port}`);
+  printConnectInfo(cfg.port);
+}).on('error', e => die(e.code === 'EADDRINUSE'
+  ? `Port ${cfg.port} is already in use: is the relay already running in another window? Close it, or pick another port with --setup.`
+  : `Can't listen on ${cfg.host}:${cfg.port}: ${e.message}`));
 
 gatewayConnect();
 if (cfg.updateCheck) {

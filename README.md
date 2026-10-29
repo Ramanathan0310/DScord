@@ -41,55 +41,66 @@ they can read your DMs and send messages under your name. So run one relay
 per person, each with that person's own token. Never share a relay that holds
 your user token. We do not accept responsibility, for someone's account being suspended, or banned from Discord.
 
-### Bot setup (recommended)
+The relay's built-in setup handles both (see below). For reference, a bot
+needs: an application in the
+[Discord Developer Portal](https://discord.com/developers/applications), its
+token (**Bot > Reset Token**), **Message Content Intent** turned on under
+**Bot > Privileged Gateway Intents** (otherwise the gateway closes with 4014),
+and an invite:
 
-1. Open the [Discord Developer Portal](https://discord.com/developers/applications)
-   and click **New Application**.
-2. Under **Bot**, click **Reset Token** and copy the token. Keep it secret.
-3. On the same page, under **Privileged Gateway Intents**, turn on
-   **Message Content Intent**. Without it the relay can't read messages and
-   stops with close code 4014.
-4. Under **OAuth2**, copy the **Client ID** and open this link with your ID
-   filled in, to invite the bot to a server you manage:
+```
+https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=68608
+```
 
-   ```
-   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=68608
-   ```
-
-   `68608` = View Channels + Send Messages + Read Message History. Someone with
-   **Manage Server** has to approve the invite. The bot only sees channels its
-   roles can see.
-
-### User token (opt-in)
-
-Set `"tokenType": "user"` and put your own account's token in `"token"`.
-Read the warning above first. A user token gives full access to your
-account, so treat it like a password.
+`68608` = View Channels + Send Messages + Read Message History. Someone with
+**Manage Server** has to approve the invite. The bot only sees channels its
+roles can see.
 
 ## 2. Run the relay
 
-Needs Node.js 22 or newer.
+Needs Node.js 22 or newer. Double-click the starter for your OS in the repo
+root (`start-relay.bat` on Windows, `start-relay.command` on macOS,
+`start-relay.sh` on Linux), or run:
 
 ```bash
-cp relay/config.example.json relay/config.json
+node relay/relay.mjs
 ```
 
-Edit `relay/config.json`:
+The first time (when there's no `relay/config.json`), it runs an interactive
+**setup**:
 
-```json
-{
-  "token": "YOUR_BOT_TOKEN",
-  "tokenType": "bot",
-  "pin": "1234",
-  "port": 5151,
-  "host": "0.0.0.0"
-}
-```
+1. **Account type:** bot (recommended) or your own user account. User mode
+   restates the ToS risk and needs `I understand` typed.
+2. **Token:** the input is masked. The setup checks it against Discord
+   (`/users/@me`) and notices when a user token was pasted for a bot or the
+   other way round. For a bot, it also links to the Developer Portal steps.
+3. **Bot only:** it checks that Message Content Intent is on (application
+   flags) and waits until it is, then prints the invite link for this bot and
+   waits until the bot is in at least one server.
+4. **PIN** (a random 6-digit one is suggested), **port** and **update check**.
+
+It writes `relay/config.json` (mode 600), shows the address / port / PIN to
+enter on the handheld, and offers to start the relay.
+
+| Command | What it does |
+|---|---|
+| `node relay/relay.mjs` | Start (runs the setup first if there's no config) |
+| `node relay/relay.mjs --setup` | Re-run the setup; current values are the defaults |
+| `node relay/relay.mjs --info` | Show the address, port and PIN for the handheld |
+| `node relay/relay.mjs --help` | Usage |
+
+On every start the relay prints the computer's LAN address(es) to enter on
+the handheld (VPN and VM interfaces are skipped), then logs in and logs each
+handheld that connects. Allow incoming connections on the port if a firewall
+asks.
+
+`relay/config.json` can also be written by hand
+([`config.example.json`](relay/config.example.json)):
 
 - `token`: the bot token (or user token in user mode).
 - `tokenType`: `"bot"` (default) or `"user"`.
 - `pin`: 4 or more digits. The handheld must send it before the relay does
-  anything. Choose your own.
+  anything.
 - `port` / `host`: where the relay listens. `0.0.0.0` means every network
   interface.
 - `updateCheck`: `true` (default) lets the relay ask GitHub for the latest
@@ -98,17 +109,9 @@ Edit `relay/config.json`:
 Each setting can also come from the environment: `DISCORD_TOKEN`,
 `DISCORD_TOKEN_TYPE`, `RELAY_PIN`, `RELAY_PORT`, `RELAY_HOST`,
 `RELAY_UPDATE_CHECK`, and `RELAY_CONFIG` for a different config file path.
-
-```bash
-make relay
-```
-
-(or `node relay/relay.mjs`). It prints `Logged in as bot ...` once Discord
-accepts the token, and logs each handheld that connects.
-
-Find the computer's LAN IP address (macOS: System Settings > Wi-Fi > Details;
-Windows: `ipconfig`; Linux: `ip addr`). That's the address you enter on the
-handheld. Allow incoming connections on the port if a firewall asks.
+With `DISCORD_TOKEN` set, the setup is skipped, which suits services and
+containers. Without a terminal and without a config, the relay exits and says
+to run `--setup`.
 
 **Security:** the handheld link is unencrypted and only protected by the PIN.
 Keep the relay on your own network. Don't port-forward it to the internet.
