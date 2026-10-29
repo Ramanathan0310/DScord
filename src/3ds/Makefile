@@ -9,15 +9,15 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITARM)/3ds_rules
 
-TARGET   := discord-ds
+TARGET   := dscord
 BUILD    := build
 SOURCES  := . ../core
 INCLUDES := ../core ../../third_party
 DATA     :=
 
-APP_TITLE       := discord-ds
+APP_TITLE       := DScord
 APP_DESCRIPTION := Discord via a relay
-APP_AUTHOR      := discord-ds
+APP_AUTHOR      := DScord
 
 ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 

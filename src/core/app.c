@@ -508,7 +508,7 @@ static void draw_top(void)
 		draw_chat_top();
 		return;
 	}
-	put(SCR_TOP, 1, 1, COL_CYAN, "discord-ds");
+	put(SCR_TOP, 1, 1, COL_CYAN, "DScord");
 	put(SCR_TOP, 2, 1, COL_WHITE, "Discord for DS / DSi / 3DS");
 	hline(SCR_TOP, 3);
 	if (S.view >= V_HOME)

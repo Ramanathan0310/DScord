@@ -6,11 +6,11 @@ all: nds 3ds
 
 nds:
 	$(MAKE) -C src/nds
-	@mkdir -p dist && cp src/nds/discord-ds.nds dist/
+	@mkdir -p dist && cp src/nds/dscord.nds dist/
 
 3ds:
 	$(MAKE) -C src/3ds
-	@mkdir -p dist && cp src/3ds/discord-ds.3dsx dist/
+	@mkdir -p dist && cp src/3ds/dscord.3dsx dist/
 
 relay:
 	node relay/relay.mjs

@@ -1,4 +1,4 @@
-# discord-ds
+# DScord
 
 A small Discord client for the Nintendo DS, DSi and 3DS.
 
@@ -34,7 +34,7 @@ The relay logs in with a **bot token** (the default) or, if you opt in, a
 automating a normal user account ("self-bots"), and Discord's support pages say
 accounts doing it may be terminated. Discord doesn't have to see abuse first:
 the ban covers using the account through unofficial software at all. The relay
-doesn't hide what it is. It identifies itself as `discord-ds` and doesn't
+doesn't hide what it is. It identifies itself as `DScord` and doesn't
 pretend to be the official client. Only use user mode on an account you're
 willing to lose. Anyone who has the relay's address and PIN acts **as you**:
 they can read your DMs and send messages under your name. So run one relay
@@ -149,7 +149,7 @@ make nds
 make 3ds
 ```
 
-The outputs are `dist/discord-ds.nds` and `dist/discord-ds.3dsx`. `make check`
+The outputs are `dist/dscord.nds` and `dist/dscord.3dsx`. `make check`
 syntax-checks the relay.
 
 No local toolchain? `.github/workflows/build.yml` builds both apps on GitHub
@@ -165,15 +165,15 @@ Layout: `src/core` is the shared client (UI in `app.c`, protocol framing in
 
 ## 5. Install
 
-- **DS flashcart (R4 and similar):** copy `discord-ds.nds` to the card's microSD
+- **DS flashcart (R4 and similar):** copy `dscord.nds` to the card's microSD
   and launch it from the cart's menu. If the cart supports DLDI auto-patching
-  (most do), settings are saved to `/discord-ds.cfg` on the card.
-- **DSi / 3DS with TWiLight Menu++:** copy `discord-ds.nds` to the SD card and
+  (most do), settings are saved to `/dscord.cfg` on the card.
+- **DSi / 3DS with TWiLight Menu++:** copy `dscord.nds` to the SD card and
   launch it from TWiLight Menu++. On a DSi it runs in DSi mode and saves
-  `/discord-ds.cfg` to the SD card root. On a 3DS, TWiLight runs it in DS mode
+  `/dscord.cfg` to the SD card root. On a 3DS, TWiLight runs it in DS mode
   with DS Wi-Fi limits, so prefer the `.3dsx` there.
-- **3DS Homebrew Launcher:** copy `discord-ds.3dsx` to `sdmc:/3ds/` and start it
-  from the Homebrew Launcher. Settings are saved to `sdmc:/3ds/discord3ds.cfg`.
+- **3DS Homebrew Launcher:** copy `dscord.3dsx` to `sdmc:/3ds/` and start it
+  from the Homebrew Launcher. Settings are saved to `sdmc:/3ds/dscord.cfg`.
 
 On first start the client asks for the relay address, port and PIN. Press X
 on the offline screen (or the server list) to change them later.

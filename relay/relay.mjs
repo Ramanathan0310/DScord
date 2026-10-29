@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// discord-ds relay: holds the Discord connection (TLS, gateway, REST) and
+// DScord relay: holds the Discord connection (TLS, gateway, REST) and
 // speaks the small line protocol in ../PROTOCOL.md to DS / DSi / 3DS clients.
 // No dependencies; needs Node 22+ (global fetch and WebSocket).
 
@@ -39,8 +39,8 @@ const cfg = loadConfig();
 // ---------------------------------------------------------------- discord identity
 
 const USER = cfg.tokenType === 'user';
-// Identifies honestly as discord-ds in both modes; no official-client spoofing.
-const UA = USER ? 'discord-ds/1.0 (https://github.com/Ramanathan0310/discord-ds)' : 'DiscordBot (https://github.com/Ramanathan0310/discord-ds, 1.0)';
+// Identifies honestly as DScord in both modes; no official-client spoofing.
+const UA = USER ? 'DScord/1.0 (https://github.com/Ramanathan0310/DScord)' : 'DiscordBot (https://github.com/Ramanathan0310/DScord, 1.0)';
 const AUTH = USER ? cfg.token : `Bot ${cfg.token}`;
 // GUILDS | GUILD_MESSAGES | DIRECT_MESSAGES | MESSAGE_CONTENT (privileged: enable it
 // under Bot -> Privileged Gateway Intents in the Developer Portal).
@@ -313,7 +313,7 @@ function onGateway(p, resume) {
         token: cfg.token,
         // User accounts get every event for their own servers; intents are a bot concept.
         ...(USER ? {} : { intents: INTENTS }),
-        properties: { os: process.platform, browser: 'discord-ds', device: 'discord-ds' },
+        properties: { os: process.platform, browser: 'DScord', device: 'DScord' },
       });
       break;
     case 11: acked = true; break;

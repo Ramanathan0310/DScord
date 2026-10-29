@@ -8,13 +8,13 @@ endif
 
 include $(DEVKITARM)/ds_rules
 
-TARGET   := discord-ds
+TARGET   := dscord
 BUILD    := build
 SOURCES  := . ../core
 INCLUDES := ../core
 DATA     :=
 
-GAME_TITLE     := discord-ds
+GAME_TITLE     := DScord
 GAME_SUBTITLE1 := Discord via a relay
 GAME_SUBTITLE2 := github.com/Ramanathan0310
 

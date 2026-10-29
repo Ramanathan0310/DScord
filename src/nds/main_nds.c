@@ -160,7 +160,7 @@ bool plat_text_input(const char *hint, const char *initial, char *out, size_t ma
 	return ok;
 }
 
-const char *plat_config_path(void) { return "/discord-ds.cfg"; }
+const char *plat_config_path(void) { return "/dscord.cfg"; }
 
 bool plat_has_images(void) { return false; }
 int plat_image_w(void) { return 256; }

@@ -1,4 +1,4 @@
-# discord-ds: the complete beginner's walkthrough
+# DScord: the complete beginner's walkthrough
 
 This guide takes you from nothing to chatting on Discord from a Nintendo DS,
 DSi or 3DS. You don't need to know how to program. Follow the steps in order
@@ -13,7 +13,7 @@ If you get stuck, jump to [Troubleshooting](#troubleshooting) at the end.
 1. [How it works (two-minute version)](#1-how-it-works-two-minute-version)
 2. [What you need](#2-what-you-need)
 3. [Install Node.js on your computer](#3-install-nodejs-on-your-computer)
-4. [Download discord-ds](#4-download-discord-ds)
+4. [Download DScord](#4-download-dscord)
 5. [Create your Discord bot](#5-create-your-discord-bot)
 6. [Set up the relay](#6-set-up-the-relay)
 7. [Start the relay](#7-start-the-relay)
@@ -21,7 +21,7 @@ If you get stuck, jump to [Troubleshooting](#troubleshooting) at the end.
 9. [Get your handheld online](#9-get-your-handheld-online)
 10. [Copy the app to your handheld](#10-copy-the-app-to-your-handheld)
 11. [First launch](#11-first-launch)
-12. [Using discord-ds](#12-using-discord-ds)
+12. [Using DScord](#12-using-dscord)
 13. [Everyday use](#13-everyday-use)
 14. [Optional: log in as yourself instead of a bot](#14-optional-log-in-as-yourself-instead-of-a-bot)
 15. [Troubleshooting](#troubleshooting)
@@ -31,7 +31,7 @@ If you get stuck, jump to [Troubleshooting](#troubleshooting) at the end.
 
 ## 1. How it works (two-minute version)
 
-Discord needs strong modern encryption that a DS can't do. So discord-ds comes
+Discord needs strong modern encryption that a DS can't do. So DScord comes
 in two parts:
 
 ```
@@ -79,8 +79,8 @@ carries real risk; see [section 14](#14-optional-log-in-as-yourself-instead-of-a
   - **DS, DS Lite and DSi:** these can only join Wi-Fi with **no password** or
     with old **WEP** security. Most home routers use WPA2, which the DS can't
     use. You'll set this up in [section 9](#9-get-your-handheld-online).
-- [ ] **The app files:** `discord-ds.nds` (for DS/DSi) and/or `discord-ds.3dsx`
-      (for 3DS). Download them from the [Releases page](https://github.com/Ramanathan0310/discord-ds/releases), or build them
+- [ ] **The app files:** `dscord.nds` (for DS/DSi) and/or `dscord.3dsx`
+      (for 3DS). Download them from the [Releases page](https://github.com/Ramanathan0310/DScord/releases), or build them
       yourself (see the main [README](../README.md#4-build)).
 
 ---
@@ -112,16 +112,16 @@ The relay is written in JavaScript and needs **Node.js version 22 or newer**.
 
 ---
 
-## 4. Download discord-ds
+## 4. Download DScord
 
-1. On the project's GitHub page (<https://github.com/Ramanathan0310/discord-ds>), click the green **Code** button, then
+1. On the project's GitHub page (<https://github.com/Ramanathan0310/DScord>), click the green **Code** button, then
    **Download ZIP**. (If you know git, `git clone` works too.)
 2. Unzip it somewhere easy to find, such as your Documents folder.
-3. You should now have a folder called `discord-ds` (it may be called
-   `discord-ds-main`; either is fine). Inside it are folders named `relay`,
+3. You should now have a folder called `DScord` (it may be called
+   `DScord-main`; either is fine). Inside it are folders named `relay`,
    `src`, `docs` and others.
 
-From now on, **"the discord-ds folder"** means this folder.
+From now on, **"the DScord folder"** means this folder.
 
 ---
 
@@ -187,7 +187,7 @@ messages** and **read message history**. That's all it needs.
 
 ## 6. Set up the relay
 
-1. Open the discord-ds folder, then the `relay` folder.
+1. Open the DScord folder, then the `relay` folder.
 2. Find the file `config.example.json`. **Make a copy** of it in the same folder
    and name the copy exactly `config.json`.
    - **Windows:** copy and paste the file, then rename it. If you can't see
@@ -236,8 +236,8 @@ When you're done it should look something like this (with your own token):
 ## 7. Start the relay
 
 1. Open a terminal (see [section 3](#3-install-nodejs-on-your-computer)).
-2. Move into the discord-ds folder. Type `cd ` (with a space after it), then
-   **drag the discord-ds folder from your file manager into the terminal
+2. Move into the DScord folder. Type `cd ` (with a space after it), then
+   **drag the DScord folder from your file manager into the terminal
    window**. That pastes its location. Press Enter.
 3. Start the relay:
 
@@ -310,7 +310,7 @@ These only support Wi-Fi with **no security** or **WEP**. You have a few options
 > **Security note:** an open network can be joined by anyone nearby. Use one
 > just for the DS, turn it off when you're done, and keep your relay PIN secret.
 
-**Saving the connection on a DS or DS Lite:** discord-ds uses the
+**Saving the connection on a DS or DS Lite:** DScord uses the
 **Nintendo Wi-Fi Connection (WFC) settings**. These live inside games that had
 online play, not in the DS menu:
 
@@ -338,23 +338,23 @@ Put the handheld's SD card (or the flashcart's microSD) into your computer.
 
 ### DS / DS Lite with a flashcart
 
-1. Copy `discord-ds.nds` anywhere on the flashcart's microSD (the root is fine).
-2. Put the card back and start the flashcart's menu. You'll find **discord-ds**
+1. Copy `dscord.nds` anywhere on the flashcart's microSD (the root is fine).
+2. Put the card back and start the flashcart's menu. You'll find **DScord**
    in the file list.
 
 ### DSi with TWiLight Menu++
 
-1. Copy `discord-ds.nds` to the SD card, for example into the `roms/nds` folder
+1. Copy `dscord.nds` to the SD card, for example into the `roms/nds` folder
    or wherever you keep your `.nds` files.
-2. Start TWiLight Menu++ and launch **discord-ds**.
+2. Start TWiLight Menu++ and launch **DScord**.
 
 ### 3DS / 2DS with custom firmware
 
-1. Copy `discord-ds.3dsx` into the `3ds` folder on the SD card (so it ends up at
-   `sdmc:/3ds/discord-ds.3dsx`). Create the folder if it doesn't exist.
+1. Copy `dscord.3dsx` into the `3ds` folder on the SD card (so it ends up at
+   `sdmc:/3ds/dscord.3dsx`). Create the folder if it doesn't exist.
 2. Put the card back, open the **Homebrew Launcher** (usually by holding R
    while starting the Mii Maker, or from the Rosalina menu), and choose
-   **discord-ds**.
+   **DScord**.
 
 > A 3DS can also run the `.nds` version through TWiLight Menu++, but then it
 > behaves like a DS (open/WEP Wi-Fi only, no images). Use the `.3dsx`.
@@ -364,7 +364,7 @@ Put the handheld's SD card (or the flashcart's microSD) into your computer.
 ## 11. First launch
 
 1. **Make sure the relay is running** on your computer (section 7).
-2. Start discord-ds. The first time, it asks three questions using the
+2. Start DScord. The first time, it asks three questions using the
    on-screen keyboard:
 
    | Question | What to enter |
@@ -386,7 +386,7 @@ To change the settings later, press **X** on the server list or on the
 
 ---
 
-## 12. Using discord-ds
+## 12. Using DScord
 
 ### The two screens
 
@@ -494,10 +494,10 @@ appears in the notification area at the bottom. The last three are kept.
 
 Each time you want to chat:
 
-1. Start the relay on your computer (`node relay/relay.mjs` in the discord-ds
+1. Start the relay on your computer (`node relay/relay.mjs` in the DScord
    folder) and leave it open.
 2. If you use a hotspot for the DS, turn it on.
-3. Start discord-ds on the handheld. It reconnects by itself.
+3. Start DScord on the handheld. It reconnects by itself.
 
 If the connection drops (for example you walk out of Wi-Fi range), the app
 shows **Not connected** and tries again every 15 seconds. Press **A** to retry
@@ -509,7 +509,7 @@ relay on an always-on machine such as a Raspberry Pi.
 
 **Running it permanently (optional, for people comfortable with terminals):**
 any tool that keeps a program running works, e.g. `pm2`
-(`npm install -g pm2`, then `pm2 start relay/relay.mjs --name discord-ds`), a
+(`npm install -g pm2`, then `pm2 start relay/relay.mjs --name DScord`), a
 systemd service on Linux, or Task Scheduler on Windows.
 
 ---
@@ -522,13 +522,13 @@ Then the DS shows **all your servers and your real DMs**, with no bot needed.
 **Read this first:** Discord's Terms of Service do not allow automating a normal
 user account ("self-bots"). Discord can disable accounts that do it. That
 covers using an account through unofficial software at all, not just abuse or
-ban evasion. discord-ds doesn't disguise itself as the official app. **Only do
+ban evasion. DScord doesn't disguise itself as the official app. **Only do
 this with an account you could afford to lose.**
 
 Also:
 
 - **Never share a relay that's logged in as you.** Anyone with its address and
-  PIN can read your DMs and post as you. If friends want to use discord-ds,
+  PIN can read your DMs and post as you. If friends want to use DScord,
   each person runs their own relay with their own account.
 - Your user token is the master key to your account, much more powerful than
   your password: it skips 2FA. Never paste it anywhere except your own
@@ -607,5 +607,5 @@ Attachments other than pictures are shown by name only, and embeds are
 shortened to fit the small screen.
 
 **Where are my settings stored?**
-DS/DSi: `/discord-ds.cfg` on the SD card. 3DS: `sdmc:/3ds/discord3ds.cfg`.
+DS/DSi: `/dscord.cfg` on the SD card. 3DS: `sdmc:/3ds/dscord.cfg`.
 Delete the file to start over with the setup questions.

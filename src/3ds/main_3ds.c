@@ -137,7 +137,7 @@ bool plat_text_input(const char *hint, const char *initial, char *out, size_t ma
 	return true;
 }
 
-const char *plat_config_path(void) { return "sdmc:/3ds/discord3ds.cfg"; }
+const char *plat_config_path(void) { return "sdmc:/3ds/dscord.cfg"; }
 
 bool plat_has_images(void) { return true; }
 int plat_image_w(void) { return TOP_W; }
