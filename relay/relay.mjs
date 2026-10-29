@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Keep in step with APP_VERSION in src/core/version.h; the release workflow checks both.
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const REPO = 'Ramanathan0310/DScord';
 const RELEASES_URL = `github.com/${REPO}/releases`;
 

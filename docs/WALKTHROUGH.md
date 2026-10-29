@@ -233,7 +233,7 @@ At the end of the setup it asks **Start the relay now?** Press Enter. After a
 few seconds you should see:
 
 ```
-12:00:01 DScord relay v1.2.0 listening on 0.0.0.0:5151
+12:00:01 DScord relay v1.3.0 listening on 0.0.0.0:5151
 
   On the DS / DSi / 3DS, enter:
     Relay address: 192.168.1.23
