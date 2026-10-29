@@ -766,7 +766,7 @@ static void request_dms(bool keep)
 
 static void request_image(const char *id, int idx)
 {
-	char si[8], sw[8], sh[8];
+	char si[12], sw[12], sh[12];
 	snprintf(si, sizeof(si), "%d", idx);
 	snprintf(sw, sizeof(sw), "%d", plat_image_w());
 	snprintf(sh, sizeof(sh), "%d", plat_image_h());

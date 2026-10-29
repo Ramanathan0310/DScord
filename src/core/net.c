@@ -15,6 +15,7 @@
 #define CLOSE_SOCKET closesocket
 #else
 #include <3ds.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>

@@ -43,7 +43,7 @@ bool config_save(const Config *c)
 
 bool config_prompt(Config *c)
 {
-	char port[8];
+	char port[12];
 	snprintf(port, sizeof(port), "%d", c->port > 0 ? c->port : 5151);
 	if (!plat_text_input("Relay address (IP or hostname)", c->host, c->host, sizeof(c->host), false))
 		return false;
