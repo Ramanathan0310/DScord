@@ -1,0 +1,7 @@
+{
+  "token": "YOUR_BOT_TOKEN",
+  "tokenType": "bot",
+  "pin": "1234",
+  "port": 5151,
+  "host": "0.0.0.0"
+}

@@ -1,0 +1,8 @@
+relay/config.json
+build/
+*.nds
+*.3dsx
+*.smdh
+*.elf
+dist/
+*.map

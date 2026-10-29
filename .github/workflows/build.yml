@@ -1,0 +1,51 @@
+# Builds the DS and 3DS apps with devkitPro's official container image.
+# Every push uploads them as workflow artifacts; pushing a tag like v1.0.0
+# also publishes them on the Releases page.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build DS / DSi (.nds)
+        run: make nds
+      - name: Build 3DS (.3dsx)
+        run: make 3ds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: discord-ds
+          path: |
+            dist/discord-ds.nds
+            dist/discord-ds.3dsx
+
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check relay/relay.mjs
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, relay]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: discord-ds
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            discord-ds.nds
+            discord-ds.3dsx
