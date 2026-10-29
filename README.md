@@ -39,7 +39,7 @@ pretend to be the official client. Only use user mode on an account you're
 willing to lose. Anyone who has the relay's address and PIN acts **as you**:
 they can read your DMs and send messages under your name. So run one relay
 per person, each with that person's own token. Never share a relay that holds
-your user token. We do not accept responsibility, for someone's account being suspended, or banned from Discord
+your user token. We do not accept responsibility, for someone's account being suspended, or banned from Discord.
 
 ### Bot setup (recommended)
 
