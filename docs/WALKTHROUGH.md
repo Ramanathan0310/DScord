@@ -248,7 +248,7 @@ When you're done it should look something like this (with your own token):
 4. After a few seconds you should see:
 
    ```
-   12:00:01 Relay listening on 0.0.0.0:5151
+   12:00:01 DScord relay v1.2.0 listening on 0.0.0.0:5151
    12:00:01 Gateway: connecting
    12:00:02 Logged in as bot My DS; 1 servers
    ```
@@ -511,6 +511,30 @@ relay on an always-on machine such as a Raspberry Pi.
 any tool that keeps a program running works, e.g. `pm2`
 (`npm install -g pm2`, then `pm2 start relay/relay.mjs --name DScord`), a
 systemd service on Linux, or Task Scheduler on Windows.
+
+### Updating DScord
+
+DScord **doesn't update itself**. Instead it reminds you:
+
+- On the handheld, the start screen (top) shows **Update available: v…**
+  with the download address. Older versions show a short notification line
+  at the bottom instead.
+- If the relay on your computer is the older one, the handheld says so, and
+  the relay window prints `Update available: DScord v…`.
+
+(The relay asks GitHub for the latest version when it starts and every 6
+hours. To turn that off, add `"updateCheck": false` to `config.json`.)
+
+To update:
+
+1. Download the new `dscord.nds` / `dscord.3dsx` from the
+   [Releases page](https://github.com/Ramanathan0310/DScord/releases) and copy
+   it over the old file on the SD card, just like in
+   [section 10](#10-copy-the-app-to-your-handheld). Your settings are kept.
+2. Download the new **Source code (zip)** from the same release page. Copy its
+   `relay/relay.mjs` over the one in your DScord folder. **Keep your
+   `config.json`**: don't replace or delete it.
+3. Stop the relay (Ctrl+C) and start it again.
 
 ---
 

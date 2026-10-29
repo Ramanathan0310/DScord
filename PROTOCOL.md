@@ -10,7 +10,7 @@ bytes.
 
 | Line | Meaning |
 |------|---------|
-| `HELLO	1	<platform>	<pin>` | platform: `0` DS, `1` DSi, `2` 3DS. Must be first. |
+| `HELLO	1	<platform>	<pin>	<app_version>` | platform: `0` DS, `1` DSi, `2` 3DS. Must be first. `app_version` (e.g. `1.2.0`) was added in 1.2; older apps leave it out. |
 | `GUILDS` | List servers. |
 | `CHANNELS	<guild_id>` | List text channels of a server. |
 | `DMS` | List DM / group DM channels, newest first. |
@@ -23,7 +23,7 @@ bytes.
 
 | Line | Meaning |
 |------|---------|
-| `OK	<username>` | Login accepted, gateway ready. |
+| `OK	<username>	<relay_version>` | Login accepted, gateway ready. `relay_version` was added in 1.2. |
 | `ERR	<text>` | Error (bad PIN closes the connection). |
 | `G	<id>	<name>	<unread>` | One server. Ends with `END	G`. |
 | `C	<id>	<name>	<unread>	<kind>` | One channel; kind `0` text, `1` category header. Ends with `END	C`. |
@@ -36,5 +36,9 @@ bytes.
 | `SENT` | Send succeeded. |
 | `BLOB	<message_id>	<index>	<count>	<length>` + `length` raw bytes | Image file (PNG/JPEG/GIF). `count` is the number of images on that message. |
 | `PONG` | Keepalive reply. |
+| `UPDATE	<latest_version>	<url>` | A newer app release exists (the relay checks GitHub). Added in 1.2; sent with a `NOTE` so older apps see it too. |
 
 Flags: bit 0 mentions you, bit 1 edited, bit 2 sent by you.
+
+Clients ignore lines and trailing fields they don't know, so new fields and
+line types can be added without breaking older apps.

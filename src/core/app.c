@@ -2,6 +2,7 @@
 #include "config.h"
 #include "net.h"
 #include "platform.h"
+#include "version.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -53,6 +54,8 @@ static struct {
 	bool have_cfg, wifi, quit;
 	int view, back; // back: list view the chat was opened from
 	char user[40];
+	char relay_ver[16];                  // from OK; empty for pre-1.2 relays
+	char update_ver[16], update_url[96]; // from UPDATE: a newer app is out
 	char err[96];
 	char status[64];
 	uint32_t status_until;
@@ -144,8 +147,8 @@ static int wrap(const char *s, int width, EmitFn emit, void *ctx)
 		do {
 			int take = left;
 			if (take > width) {
-				int b = width;
-				while (b > 0 && p[b] != ' ')
+				int b = width; // break at a space, or just after a '/' in links
+				while (b > 0 && p[b] != ' ' && p[b - 1] != '/')
 					b--;
 				take = b > 0 ? b : width;
 			}
@@ -500,6 +503,46 @@ static void draw_chat_top(void)
 	}
 }
 
+typedef struct {
+	int scr, row, color;
+} WrapCtx;
+
+static void emit_wrapped(const char *s, int len, void *c)
+{
+	WrapCtx *w = c;
+	put(w->scr, w->row++, 1, w->color, "%.*s", len, s);
+}
+
+// Word-wraps text from row down (indented one column); returns the next row.
+static int put_wrapped(int scr, int row, int color, const char *text)
+{
+	WrapCtx w = { scr, row, color };
+	wrap(text, plat_cols(scr) - 2, emit_wrapped, &w);
+	return w.row;
+}
+
+// Compares "1.2.0"-style versions; a leading "v" is ignored.
+static int ver_cmp(const char *a, const char *b)
+{
+	for (int i = 0; i < 3; i++) {
+		if (*a == 'v')
+			a++;
+		if (*b == 'v')
+			b++;
+		char *ea, *eb;
+		long x = strtol(a, &ea, 10), y = strtol(b, &eb, 10);
+		a = ea;
+		b = eb;
+		if (x != y)
+			return x < y ? -1 : 1;
+		if (*a == '.')
+			a++;
+		if (*b == '.')
+			b++;
+	}
+	return 0;
+}
+
 static void draw_top(void)
 {
 	plat_select(SCR_TOP);
@@ -508,7 +551,7 @@ static void draw_top(void)
 		draw_chat_top();
 		return;
 	}
-	put(SCR_TOP, 1, 1, COL_CYAN, "DScord");
+	put(SCR_TOP, 1, 1, COL_CYAN, "DScord v%s", APP_VERSION);
 	put(SCR_TOP, 2, 1, COL_WHITE, "Discord for DS / DSi / 3DS");
 	hline(SCR_TOP, 3);
 	if (S.view >= V_HOME)
@@ -530,6 +573,20 @@ static void draw_top(void)
 		put(SCR_TOP, r++, 1, COL_WHITE, "%s", tips[i]);
 	if (plat_has_images())
 		put(SCR_TOP, r++, 1, COL_WHITE, "A on a message shows images.");
+	r++;
+	char buf[192];
+	if (S.update_ver[0]) {
+		put(SCR_TOP, r++, 1, COL_YELLOW, "Update available: v%s", S.update_ver);
+		snprintf(buf, sizeof(buf), "You have v%s. Download the new version from %s", APP_VERSION, S.update_url);
+		r = put_wrapped(SCR_TOP, r, COL_WHITE, buf);
+	}
+	if (S.view >= V_HOME && ver_cmp(S.relay_ver[0] ? S.relay_ver : "0", APP_VERSION) < 0) {
+		if (S.relay_ver[0])
+			snprintf(buf, sizeof(buf), "The relay (v%s) is older than this app. Update it on your computer.", S.relay_ver);
+		else
+			snprintf(buf, sizeof(buf), "The relay is older than this app. Update it on your computer.");
+		put_wrapped(SCR_TOP, r, COL_YELLOW, buf);
+	}
 }
 
 static const char *default_status(void)
@@ -731,7 +788,7 @@ static void do_connect(void)
 	}
 	char plat[4];
 	snprintf(plat, sizeof(plat), "%d", plat_id());
-	net_send("HELLO", "1", plat, S.cfg.pin, NULL);
+	net_send("HELLO", "1", plat, S.cfg.pin, APP_VERSION, NULL);
 	S.view = V_LOGIN;
 	S.login_start = S.last_rx = S.last_ping = S.frame;
 	S.status_until = S.frame;
@@ -799,6 +856,7 @@ static void on_line(char **f, int n)
 
 	if (!strcmp(c, "OK")) {
 		cp(S.user, sizeof(S.user), n > 1 ? f[1] : "?");
+		cp(S.relay_ver, sizeof(S.relay_ver), n > 2 ? f[2] : "");
 		S.view = V_HOME;
 		S.err[0] = 0;
 		request_home(true);
@@ -887,6 +945,10 @@ static void on_line(char **f, int n)
 		if (S.nnotes < MAX_NOTES)
 			S.nnotes++;
 		S.dirty_bot = true;
+	} else if (!strcmp(c, "UPDATE") && n > 2 && ver_cmp(f[1], APP_VERSION) > 0) {
+		cp(S.update_ver, sizeof(S.update_ver), f[1]);
+		cp(S.update_url, sizeof(S.update_url), f[2]);
+		S.dirty_top = true;
 	} else if (!strcmp(c, "SENT")) {
 		set_status("Sent");
 	}

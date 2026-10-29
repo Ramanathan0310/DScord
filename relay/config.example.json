@@ -3,5 +3,6 @@
   "tokenType": "bot",
   "pin": "1234",
   "port": 5151,
-  "host": "0.0.0.0"
+  "host": "0.0.0.0",
+  "updateCheck": true
 }

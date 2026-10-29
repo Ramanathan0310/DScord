@@ -14,6 +14,12 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check the versions match the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -q "APP_VERSION \"$v\"" src/core/version.h || { echo "src/core/version.h is not $v"; exit 1; }
+          grep -q "const VERSION = '$v'" relay/relay.mjs || { echo "relay/relay.mjs is not $v"; exit 1; }
       - name: Build DS / DSi (.nds)
         run: make nds
       - name: Build 3DS (.3dsx)

@@ -9,6 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Keep in step with APP_VERSION in src/core/version.h; the release workflow checks both.
+const VERSION = '1.2.0';
+const REPO = 'Ramanathan0310/DScord';
+const RELEASES_URL = `github.com/${REPO}/releases`;
 
 // ---------------------------------------------------------------- config
 
@@ -22,6 +26,7 @@ function loadConfig() {
     pin: String(process.env.RELAY_PIN || file.pin || ''),
     port: Number(process.env.RELAY_PORT || file.port || 5151),
     host: process.env.RELAY_HOST || file.host || '0.0.0.0',
+    updateCheck: !['0', 'false', 'no'].includes(String(process.env.RELAY_UPDATE_CHECK ?? file.updateCheck ?? true).toLowerCase()),
   };
   if (!cfg.token || cfg.token === 'YOUR_BOT_TOKEN') die(`No token. Copy relay/config.example.json to ${p} and fill in "token" (or set DISCORD_TOKEN).`);
   if (cfg.tokenType !== 'bot' && cfg.tokenType !== 'user') die('"tokenType" must be "bot" or "user".');
@@ -40,7 +45,7 @@ const cfg = loadConfig();
 
 const USER = cfg.tokenType === 'user';
 // Identifies honestly as DScord in both modes; no official-client spoofing.
-const UA = USER ? 'DScord/1.0 (https://github.com/Ramanathan0310/DScord)' : 'DiscordBot (https://github.com/Ramanathan0310/DScord, 1.0)';
+const UA = USER ? `DScord/${VERSION} (https://github.com/${REPO})` : `DiscordBot (https://github.com/${REPO}, ${VERSION})`;
 const AUTH = USER ? cfg.token : `Bot ${cfg.token}`;
 // GUILDS | GUILD_MESSAGES | DIRECT_MESSAGES | MESSAGE_CONTENT (privileged: enable it
 // under Bot -> Privileged Gateway Intents in the Developer Portal).
@@ -397,6 +402,37 @@ function onDispatch(t, d) {
   }
 }
 
+// ---------------------------------------------------------------- update check
+
+// Handhelds can't reach GitHub themselves, so the relay looks up the latest
+// release and reminds clients (and its own console) when they're behind.
+let latest = null; // e.g. '1.3.0'
+
+function verCmp(a, b) {
+  const pa = String(a).replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) < (pb[i] || 0) ? -1 : 1;
+  return 0;
+}
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers: { 'User-Agent': `DScord-relay/${VERSION}`, Accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) throw new Error(`GitHub ${res.status}`);
+    const tag = String((await res.json()).tag_name || '').replace(/^v/, '');
+    if (!/^\d+\.\d+/.test(tag)) return;
+    const changed = tag !== latest;
+    latest = tag;
+    if (changed && verCmp(VERSION, latest) < 0)
+      log(`Update available: DScord v${latest} (this relay is v${VERSION}). Download it from https://${RELEASES_URL}`);
+    if (changed) for (const c of clients) c.remindUpdate();
+  } catch (e) {
+    log(`Update check failed: ${e.message}`);
+  }
+}
+
 // ---------------------------------------------------------------- clients
 
 const clients = new Set();
@@ -439,11 +475,13 @@ class Client {
       if (cmd !== 'HELLO') return this.send('ERR', 'say HELLO first');
       if (a[2] !== cfg.pin) { this.send('ERR', 'Wrong PIN'); log(`${this.name} wrong PIN`); return void this.sock.end(); }
       this.platform = Number(a[1]) || 0;
+      this.version = a[3] || '0.0.0'; // v0.1.x clients don't send one
       while (!state.ready) await sleep(250);
       this.authed = true;
       clients.add(this);
-      log(`${this.name} logged in (${PLATFORMS[this.platform] ?? '?'})`);
-      return this.send('OK', asciify(displayName(state.me)));
+      log(`${this.name} logged in (${PLATFORMS[this.platform] ?? '?'} app v${this.version})`);
+      this.send('OK', asciify(displayName(state.me)), VERSION);
+      return this.remindUpdate();
     }
     switch (cmd) {
       case 'PING': return this.send('PONG');
@@ -499,6 +537,17 @@ class Client {
     }
   }
 
+  // UPDATE is understood by v1.2+ apps; the NOTE reaches older ones too.
+  remindUpdate() {
+    if (!this.authed || !latest) return;
+    if (verCmp(this.version, latest) < 0) {
+      this.send('UPDATE', latest, RELEASES_URL);
+      this.send('NOTE', `Update: DScord v${latest} is out (you have v${this.version.replace(/^v/, '')}). Get it at ${RELEASES_URL}`);
+    }
+    if (verCmp(VERSION, latest) < 0)
+      this.send('NOTE', `Relay update: v${latest} is out (relay is v${VERSION}). Update it on your computer.`);
+  }
+
   async sendImage(msgId, idx, maxw, maxh) {
     const imgs = imageCache.get(msgId);
     const img = imgs?.[idx];
@@ -525,6 +574,10 @@ class Client {
 net.createServer(sock => {
   const c = new Client(sock);
   log(`${c.name} connected`);
-}).listen(cfg.port, cfg.host, () => log(`Relay listening on ${cfg.host}:${cfg.port}`));
+}).listen(cfg.port, cfg.host, () => log(`DScord relay v${VERSION} listening on ${cfg.host}:${cfg.port}`));
 
 gatewayConnect();
+if (cfg.updateCheck) {
+  checkForUpdate();
+  setInterval(checkForUpdate, 6 * 60 * 60 * 1000);
+}

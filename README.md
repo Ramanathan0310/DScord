@@ -92,10 +92,12 @@ Edit `relay/config.json`:
   anything. Choose your own.
 - `port` / `host`: where the relay listens. `0.0.0.0` means every network
   interface.
+- `updateCheck`: `true` (default) lets the relay ask GitHub for the latest
+  DScord release at startup and every 6 hours (see Updating).
 
 Each setting can also come from the environment: `DISCORD_TOKEN`,
-`DISCORD_TOKEN_TYPE`, `RELAY_PIN`, `RELAY_PORT`, `RELAY_HOST`, and
-`RELAY_CONFIG` for a different config file path.
+`DISCORD_TOKEN_TYPE`, `RELAY_PIN`, `RELAY_PORT`, `RELAY_HOST`,
+`RELAY_UPDATE_CHECK`, and `RELAY_CONFIG` for a different config file path.
 
 ```bash
 make relay
@@ -177,6 +179,22 @@ Layout: `src/core` is the shared client (UI in `app.c`, protocol framing in
 
 On first start the client asks for the relay address, port and PIN. Press X
 on the offline screen (or the server list) to change them later.
+
+## Updating
+
+Nothing updates by itself. The handhelds can't reach GitHub, so the relay
+checks `api.github.com` for the latest release (unless `updateCheck` is
+`false`) and:
+
+- prints `Update available: DScord vX` in its console when the relay is behind;
+- tells each connecting app that's behind. v1.2+ apps show the update on the
+  top screen; older apps get a notification line.
+- v1.2+ apps also warn when the relay is older than the app.
+
+To update, download the new `.nds` / `.3dsx` from
+[Releases](https://github.com/Ramanathan0310/DScord/releases) and copy it over
+the old one, then replace the `relay` folder's `relay.mjs` with the new one
+(keep your `config.json`) and restart the relay.
 
 ## 6. Controls
 
